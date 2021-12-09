@@ -8,10 +8,6 @@ from telethon import events
 
 
 # Logging
-from telethon.events import NewMessage
-from telethon.tl.types import Message
-
-
 def create_logger():
     logfile_path = 'logs/'
     logfile_name = 'forwardgram.log'
