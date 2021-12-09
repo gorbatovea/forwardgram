@@ -1,4 +1,4 @@
-# forwardgram
+# ForwardGram
 ### About
 This script forwards messages through [TG] chats and channels. Backed by [Telethon].
 
