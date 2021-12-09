@@ -8,6 +8,10 @@ from telethon import events
 
 
 # Logging
+from telethon.events import NewMessage
+from telethon.tl.types import Message
+
+
 def create_logger():
     logfile_path = 'logs/'
     logfile_name = 'forwardgram.log'
@@ -74,6 +78,9 @@ def resolve_sender_id(peer_id):
     return None
 
 
+response_header = '[REPLY] \n\n'
+
+
 async def handle_new_message(event):
     sender_id = resolve_sender_id(event.message.peer_id)
 
@@ -82,6 +89,9 @@ async def handle_new_message(event):
         return
 
     if sender_id == source_dialog_id:
+        if event.message.reply_to is not None:
+            message_with_response_header = response_header + event.message.message
+            event.message.message = message_with_response_header
         LOGGER.info('Sending message from "%s" to "%s".', forward_from_name, forward_to_name)
         await client.send_message(target_dialog, event.message)
 
