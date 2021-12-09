@@ -1,7 +1,6 @@
 import json
 import logging
 import sys
-from logging import Logger
 
 from telethon import TelegramClient
 from telethon import events
