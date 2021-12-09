@@ -12,8 +12,8 @@ def create_logger():
     logfile_path = 'logs/'
     logfile_name = 'forwardgram.log'
     Path(logfile_path).mkdir(parents=True, exist_ok=True)
-    logging.basicConfig(format='%(asctime)s:%(levelname)s:%(module)s: %(message)s', filename=logfile_path + logfile_name,
-                        filemode='a', level=logging.INFO)
+    logging.basicConfig(format='%(asctime)s:%(levelname)s:%(module)s: %(message)s',
+                        filename=logfile_path + logfile_name, filemode='a', level=logging.INFO)
     return logging.getLogger('ForwardGram')
 
 
