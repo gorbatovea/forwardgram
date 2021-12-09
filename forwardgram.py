@@ -60,7 +60,7 @@ async def handle_new_message(event):
         sender_id = event.message.peer_id.user_id
 
     if sender_id == source_dialog_id:
-        print('Sending message from "{}" to "{}".'.format(forward_from_name, forward_to_name))
+        print('Sending message from "{}" to "{}".'.format(forward_from_name, forward_to_name), flush=True)
         await client.send_message(target_dialog, event.message.message)
 
 
@@ -89,7 +89,7 @@ def start_forwarding():
     client.start()
 
     current_session = client.loop.run_until_complete(get_current_session_name())
-    print('Running as {}(@{}).'.format(current_session[0], current_session[1]))
+    print('Running as {}(@{}).'.format(current_session[0], current_session[1]), flush=True)
 
     global target_dialog, source_dialog_id
     target_dialog = client.loop.run_until_complete(fetch_target_dialog(forward_to_name))
@@ -97,7 +97,7 @@ def start_forwarding():
 
     client.add_event_handler(handle_new_message, events.NewMessage)
     print('Forwarding from "{}"(id={}) to "{}"(id={})'.format(forward_from_name, source_dialog_id, forward_to_name,
-                                                              target_dialog.entity.id))
+                                                              target_dialog.entity.id), flush=True)
     client.run_until_disconnected()
 
 
@@ -106,7 +106,7 @@ def login():
     client = TelegramClient(name, api_id, api_hash)
     client.start()
     current_session = client.loop.run_until_complete(get_current_session_name())
-    print('Signed in as {}(@{}).'.format(current_session[0], current_session[1]))
+    print('Signed in as {}(@{}).'.format(current_session[0], current_session[1]), flush=True)
 
 
 def read_api_configuration():
@@ -130,7 +130,7 @@ def main():
         start_forwarding()
         return 0
 
-    print('Error! Unknown command "{}", available commands: "{}", "{}".'.format(command, login_command, forward_command))
+    print('Error! Unknown command "{}", available commands: "{}", "{}".'.format(command, login_command, forward_command), flush=True)
 
 
 if __name__ == '__main__':
