@@ -50,32 +50,44 @@ def extract_params(argv, forward_from_index, forward_to_index):
     return [argv[forward_from_index], argv[forward_to_index]]
 
 
+def resolve_sender_id(peer_id):
+    if hasattr(peer_id, 'channel_id'):
+        return peer_id.channel_id
+    if hasattr(peer_id, 'chat_id'):
+        return peer_id.chat_id
+    if hasattr(peer_id, 'user_id'):
+        return peer_id.user_id
+    print('Error! Cannot resolve sender_id by peer="{}"'.format(peer_id))
+    return None
+
+
 async def handle_new_message(event):
-    sender_id = None
-    if hasattr(event.message.peer_id, 'channel_id'):
-        sender_id = event.message.peer_id.channel_id
-    if hasattr(event.message.peer_id, 'chat_id'):
-        sender_id = event.message.peer_id.chat_id
-    if hasattr(event.message.peer_id, 'user_id'):
-        sender_id = event.message.peer_id.user_id
+    sender_id = resolve_sender_id(event.message.peer_id)
+
+    if sender_id is None:
+        print('Ignoring message "{}"'.format(event.message))
+        return
 
     if sender_id == source_dialog_id:
         print('Sending message from "{}" to "{}".'.format(forward_from_name, forward_to_name))
-        await client.send_message(target_dialog, event.message.message)
+        await client.send_message(target_dialog, event.message)
 
 
-async def fetch_source_dialog_id(name):
+async def fetch_dialog(name):
     dialogs = await client.get_dialogs()
-    for dialog in dialogs:
-        if dialog.name == name:
-            return dialog.entity.id
 
-
-async def fetch_target_dialog(name):
-    dialogs = await client.get_dialogs()
+    # Search be dialog name
     for dialog in dialogs:
         if dialog.name == name:
             return dialog
+
+    # Search be username
+    for dialog in dialogs:
+        if hasattr(dialog.entity, 'username') \
+                and dialog.entity.username == name:
+            return dialog
+
+    raise Exception('Error! Target dialog was not found for name="{}"'.format(name))
 
 
 def start_forwarding():
@@ -92,8 +104,8 @@ def start_forwarding():
     print('Running as {}(@{}).'.format(current_session[0], current_session[1]))
 
     global target_dialog, source_dialog_id
-    target_dialog = client.loop.run_until_complete(fetch_target_dialog(forward_to_name))
-    source_dialog_id = client.loop.run_until_complete(fetch_source_dialog_id(forward_from_name))
+    target_dialog = client.loop.run_until_complete(fetch_dialog(forward_to_name))
+    source_dialog_id = client.loop.run_until_complete(fetch_dialog(forward_from_name)).entity.id
 
     client.add_event_handler(handle_new_message, events.NewMessage)
     print('Forwarding from "{}"(id={}) to "{}"(id={})'.format(forward_from_name, source_dialog_id, forward_to_name,
