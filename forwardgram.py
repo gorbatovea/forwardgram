@@ -114,6 +114,7 @@ def start_forwarding():
     client.add_event_handler(handle_new_message, events.NewMessage)
     LOGGER.info('Forwarding from "%s"(id=%s) to "%s"(id=%s)', forward_from_name, source_dialog_id, forward_to_name, target_dialog.entity.id)
     client.run_until_disconnected()
+    LOGGER.info('Forwarding is done. Exit.')
 
 
 def login():
