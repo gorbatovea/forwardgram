@@ -22,4 +22,11 @@ https://my.telegram.org/apps
 
 ### Launch
 
-```python3 forwardgram.py <command: login|forward> <forward from> <forward to>```
+```
+python3 forwardgram.py \
+    --cmd <login|forward> 
+    --from <forward_from (mandatory when cmd==forward)> \
+    --to <forward_to (mandatory when cmd==forward)> \
+    --log-path <logs_dir (optional)> \
+    --log-file <logs_file_name (optional)>
+```
