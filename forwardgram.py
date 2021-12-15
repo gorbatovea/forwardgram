@@ -1,23 +1,36 @@
+import argparse
 import json
 import logging
-import sys
 from pathlib import Path
 
 from telethon import TelegramClient
 from telethon import events
+from telethon.tl.custom import Message
+
+
+# Arguments parsing
+def parse_args():
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument('--cmd', dest='cmd', default='login', help='Command(login|forward)')
+    arg_parser.add_argument('--from', dest='forward_from', help='Source')
+    arg_parser.add_argument('--to', dest='forward_to', help='Target')
+    arg_parser.add_argument('--log-path', dest='log_path', default='logs/', help='Path for logs')
+    arg_parser.add_argument('--log-file', dest='log_file', default='forwardgram.log', help='Log file name')
+    return arg_parser.parse_args()
+
+
+args = parse_args()
 
 
 # Logging
-def create_logger():
-    logfile_path = 'logs/'
-    logfile_name = 'forwardgram.log'
+def create_logger(logfile_path, logfile_name):
     Path(logfile_path).mkdir(parents=True, exist_ok=True)
     logging.basicConfig(format='%(asctime)s:%(levelname)s:%(module)s: %(message)s',
                         filename=logfile_path + logfile_name, filemode='a', level=logging.INFO)
     return logging.getLogger('ForwardGram')
 
 
-LOGGER = create_logger()
+LOGGER = create_logger(args.log_path, args.log_file)
 
 # Constants
 api_id_key = 'api_id'
@@ -41,26 +54,6 @@ source_dialog_id = None
 async def get_current_session_name():
     me = await client.get_me()
     return [me.first_name, me.username]
-
-
-def extract_param(argv, index):
-    if argv[index] is None or len(argv[index]) == 0:
-        LOGGER.error('Error! Provide argument on %s position.', index)
-        exit(1)
-    return argv[index]
-
-
-def extract_params(argv, forward_from_index, forward_to_index):
-    if len(argv) < 3:
-        LOGGER.error('Error! Provide arguments "forward_from" as a first argument and "forward_to" as a second argument. You have provided %s argument(s)', len(argv) - 1)
-        exit(1)
-    if argv[forward_from_index] is None or len(argv[forward_from_index]) == 0:
-        LOGGER.error('Error! Provide argument "forward_from" as a first argument.')
-        exit(1)
-    if argv[forward_to_index] is None or len(argv[forward_to_index]) == 0:
-        LOGGER.error('Error! Provide argument "forward_to" as a second argument.')
-        exit(1)
-    return [argv[forward_from_index], argv[forward_to_index]]
 
 
 def resolve_sender_id(peer_id):
@@ -89,7 +82,7 @@ async def handle_new_message(event):
             message_with_response_header = response_header + event.message.message
             event.message.message = message_with_response_header
         LOGGER.info('Sending message from "%s" to "%s".', forward_from_name, forward_to_name)
-        await client.send_message(target_dialog, event.message)
+        sent_message: Message = await client.send_message(target_dialog, event.message)
 
 
 async def fetch_dialog(name):
@@ -110,10 +103,9 @@ async def fetch_dialog(name):
 
 
 def start_forwarding():
-    params = extract_params(sys.argv, 2, 3)
     global forward_from_name, forward_to_name
-    forward_from_name = params[0]
-    forward_to_name = params[1]
+    forward_from_name = args.forward_from
+    forward_to_name = args.forward_to
 
     global client
     client = TelegramClient(name, api_id, api_hash)
@@ -154,7 +146,7 @@ def main():
 
         login_command = 'login'
         forward_command = 'forward'
-        command = extract_param(sys.argv, 1)
+        command = args.cmd
         if command == login_command:
             login()
             return 0
