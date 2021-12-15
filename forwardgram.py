@@ -86,6 +86,9 @@ async def handle_new_message(event):
 
 
 async def fetch_dialog(name):
+    if name is None:
+        raise Exception('Error! Argument \'name\' should not be \'None\'.')
+
     dialogs = await client.get_dialogs()
 
     # Search be dialog name
