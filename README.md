@@ -17,9 +17,24 @@ Configuration schema should contain:
   "api_hash": "<api_hsas>"
 }
 ```
-#### Where should i get parameters for config file?
+#### Where should I get parameters for config file?
 https://my.telegram.org/apps
 
+### Redis installation & setup
+#### Install
+```
+docker pull redis:6.2.6
+```
+#### Run
+```
+mkdir redis-data 
+
+docker run --name forward-redis -p 127.0.0.1:6379:6379 -v redis-data:/data -d redis:6.2.6 redis-server --save 60 1 --loglevel warning
+```
+#### Official page
+[Redis docker image]
+
+[Redis docker image]:https://hub.docker.com/_/redis?tab=description
 ### Launch
 
 ```
