@@ -1,4 +1,11 @@
 {
   "api_id": 1234,
-  "api_hash": "<api_hash>"
+  "api_hash": "<api_hash>",
+  "storage": {
+    "type": "redis",
+    "host": "localhost",
+    "port": 6379,
+    "password": "password",
+    "expiration_time": 7
+  }
 }

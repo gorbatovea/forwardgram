@@ -3,6 +3,8 @@ import json
 import logging
 from pathlib import Path
 
+import redis
+from redis.client import Redis
 from telethon import TelegramClient
 from telethon import events
 from telethon.tl.custom import Message
@@ -32,23 +34,22 @@ def create_logger(logfile_path, logfile_name):
 
 LOGGER = create_logger(args.log_path, args.log_file)
 
-# Constants
-api_id_key = 'api_id'
-api_hash_key = 'api_hash'
-
-# Telegram client conf
-api_id = None
-api_hash = None
+# Configuration
 name = 'forwardgram'
+config = None
 
-# Interface
+# Client params
 forward_from_name = None
 forward_to_name = None
 
-# Global variables
+# Telegram
 client: TelegramClient = None
 target_dialog = None
 source_dialog_id = None
+
+# Storage
+redis_storage: Redis = None
+data_expires_in_days = None
 
 
 async def get_current_session_name():
@@ -67,7 +68,23 @@ def resolve_sender_id(peer_id):
     return None
 
 
-response_header = '[REPLY] \n\n'
+def store_message_mapping(received_message, forwarded_message):
+    redis_storage.set(name=received_message.id, value=forwarded_message.id, ex=data_expires_in_days)
+    LOGGER.debug('Messages: stored mapping "%d" -> "%d"', received_message.id, forwarded_message.id)
+
+
+def process_new_message(message):
+    if message.reply_to is None:
+        return {'message': message, 'reply_to_id': None}
+
+    reply_to_id = redis_storage.get(message.reply_to.reply_to_msg_id)
+    if reply_to_id is None:
+        message_with_response_header = '[REPLY] \n\n' + message.message
+        message.message = message_with_response_header
+        message.reply_to = None
+        return {'message': message, 'reply_to_id': None}
+
+    return {'message': message, 'reply_to_id': int(reply_to_id)}
 
 
 async def handle_new_message(event):
@@ -78,11 +95,14 @@ async def handle_new_message(event):
         return
 
     if sender_id == source_dialog_id:
-        if event.message.reply_to is not None:
-            message_with_response_header = response_header + event.message.message
-            event.message.message = message_with_response_header
+        new_message_dict = process_new_message(event.message)
         LOGGER.info('Sending message from "%s" to "%s".', forward_from_name, forward_to_name)
-        sent_message: Message = await client.send_message(target_dialog, event.message)
+        sent_message: Message = await client.send_message(
+            target_dialog,
+            new_message_dict['message'],
+            reply_to=new_message_dict['reply_to_id']
+        )
+        store_message_mapping(event.message, sent_message)
 
 
 async def fetch_dialog(name):
@@ -105,7 +125,7 @@ async def fetch_dialog(name):
     raise Exception('Error! Target dialog was not found for name="{}"'.format(name))
 
 
-def start_forwarding():
+def start_forwarding(api_id, api_hash):
     global forward_from_name, forward_to_name
     forward_from_name = args.forward_from
     forward_to_name = args.forward_to
@@ -127,7 +147,7 @@ def start_forwarding():
     LOGGER.info('Forwarding is done. Exit.')
 
 
-def login():
+def login(api_id, api_hash):
     global client
     client = TelegramClient(name, api_id, api_hash)
     client.start()
@@ -135,26 +155,35 @@ def login():
     LOGGER.info('Signed in as %s(@%s).', current_session[0], current_session[1])
 
 
-def read_api_configuration():
-    with open('conf/api_conf.json') as json_conf:
-        conf_dict = json.load(json_conf)
-        global api_id, api_hash
-        api_id = conf_dict[api_id_key]
-        api_hash = conf_dict[api_hash_key]
+def read_configuration(config_path):
+    with open(config_path) as json_conf:
+        return json.load(json_conf)
+
+
+def init_redis_storage_client(host, port, password, expiration_time):
+    global redis_storage, data_expires_in_days
+    redis_storage = redis.Redis(host=host, port=port, password=password, ssl=False)
+    data_expires_in_days = expiration_time * 60 * 60 * 24
 
 
 def main():
     try:
-        read_api_configuration()
+        global config
+        config = read_configuration('conf/api_conf.json')
 
-        login_command = 'login'
-        forward_command = 'forward'
-        command = args.cmd
-        if command == login_command:
-            login()
+        storage_config = config['storage']
+        init_redis_storage_client(
+            host=storage_config['host'],
+            port=storage_config['port'],
+            password=storage_config['password'],
+            expiration_time=storage_config['expiration_time']
+        )
+
+        if args.cmd == 'login':
+            login(api_id=config['api_id'], api_hash=config['api_hash'])
             return 0
-        if command == forward_command:
-            start_forwarding()
+        if args.cmd == 'forward':
+            start_forwarding(api_id=config['api_id'], api_hash=config['api_hash'])
             return 0
     except Exception as exception:
         LOGGER.error(exception)

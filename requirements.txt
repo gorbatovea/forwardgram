@@ -1,1 +1,2 @@
 Telethon==1.24.0
+redis==4.0.2
