@@ -10,13 +10,8 @@ This script forwards messages through [TG] chats and channels. Backed by [Teleth
 
 ### Configuration
 Configuration file should be stored at `conf/api_conf.json`.
-Configuration schema should contain: 
-```
-{
-  "api_id": <api_id>,
-  "api_hash": "<api_hsas>"
-}
-```
+
+See `conf/api_conf-example.json`.
 #### Where should I get parameters for config file?
 https://my.telegram.org/apps
 
